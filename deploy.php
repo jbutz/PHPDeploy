@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 $ops = getopt("d:i:o:eyqvh");
 
@@ -43,13 +44,13 @@ else
 	usage();
 	return -1;
 }
-prompt(array());
-return;
+$display = array();
+$commands = array();
 // Validate operation and do stuff
 switch($operation)
 {
 	case 'GIT':
-		git();
+		git($quiet,$verbose,$erase,$output,$input,$display,$commands);
 		break;
 	case 'FILE':
 	case 'TAR':
@@ -62,7 +63,62 @@ switch($operation)
 		break;
 }
 
+prompt($display);
+run($commands);
+return;
+function git($quiet,$verbose,$erase,$dir,$input,&$display,&$commands)
+{
+	$commands = array();
+	$display = array();
+	$outdir = "/tmp/phpdeploy".(time() + rand());
+	$display[] = "A git clone will be performed on $input.";
+	$display[] = "The output will be placed into $dir.";
+	$ops = "";
+	if($quiet)
+	{
+		$ops .= " -q";
+		$display[] = "This will be done quietly.";
+	}
+	if($verbose)
+	{
+		$ops .= " -v";
+		$display[] = "This will be done verbosely.";
+	}
+	$ops = trim($ops);
+	$commands[] = "git clone $ops $input $outdir";
+	if($erase)
+	{
+		$display[] = "*** DANGER ***";
+		$display[] = "The contents of $dir will be erased.";
+		$commands[] = "rm -rf $dir";
+	}
+	$ops = "";
+	if($quiet)
+		$ops .= "q";
+	if($verbose)
+		$ops .= "v";
+	$commands[] = "rsync -aC$ops --exclude \".git\" --exclude \".git/\" $outdir/ $dir";
+	$commands[] = "rm -rf $outdir";
+}
 
+function run($commands)
+{
+	global $verbose;
+	$junk = array();
+	$val = 0;
+	foreach($commands as $command)
+	{
+		if($verbose)
+			echo $command."\n";
+		passthru($command,$val);
+		if($val != 0)
+		{
+			echo "\n\nAn error occured while running the following command:\n";
+			echo "\t$command\n\n";
+			return -1;
+		}
+	}
+}
 function prompt($array)
 {
 	$txt = implode("\n",$array);

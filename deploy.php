@@ -53,8 +53,10 @@ switch($operation)
 		git($quiet,$verbose,$erase,$output,$input,$display,$commands);
 		break;
 	case 'FILE':
+		fileop($quiet,$verbose,$erase,$output,$input,$display,$commands);
+		break;
 	case 'TAR':
-		die("Error: Not created yet.");
+		die("Error: Not created yet.\n\n");
 		break;
 	default:
 		echo "Error: Not a valid operation.\n\n";
@@ -88,8 +90,8 @@ function git($quiet,$verbose,$erase,$dir,$input,&$display,&$commands)
 	$commands[] = "git clone $ops $input $outdir";
 	if($erase)
 	{
-		$display[] = "*** DANGER ***";
-		$display[] = "The contents of $dir will be erased.";
+		$display[] = "\033[0;31m*** DANGER ***";
+		$display[] = "The contents of $dir will be erased.\033[0m";
 		$commands[] = "rm -rf $dir";
 	}
 	$ops = "";
@@ -99,6 +101,31 @@ function git($quiet,$verbose,$erase,$dir,$input,&$display,&$commands)
 		$ops .= "v";
 	$commands[] = "rsync -aC$ops --exclude \".git\" --exclude \".git/\" $outdir/ $dir";
 	$commands[] = "rm -rf $outdir";
+}
+
+function fileop($quiet,$verbose,$erase,$dir,$input,&$display,&$commands)
+{
+	$commands = array();
+	$display = array();
+	$display[] = "A rsync will be performed from $input to $dir.";
+	$ops = "";
+	if($quiet)
+	{
+		$ops .= "q";
+		$display[] = "This will be done quietly.";
+	}
+	if($verbose)
+	{
+		$ops .= "v";
+		$display[] = "This will be done verbosely.";
+	}
+	if($erase)
+	{
+		$display[] = "\033[0;31m*** DANGER ***";
+		$display[] = "The contents of $dir will be erased.\033[0m";
+		$commands[] = "rm -rf $dir";
+	}
+	$commands[] = "rsync -aC$ops --exclude \".git\" --exclude \".git/\" $input $dir";
 }
 
 function run($commands)
@@ -113,11 +140,12 @@ function run($commands)
 		passthru($command,$val);
 		if($val != 0)
 		{
-			echo "\n\nAn error occured while running the following command:\n";
-			echo "\t$command\n\n";
+			echo "\n\n\033[0;31mAn error occured while running the following command:\n";
+			echo "\t$command\033[0m\n\n";
 			return -1;
 		}
 	}
+	echo "\033[0;32mOperations Successful\033[0m\n";
 }
 function prompt($array)
 {
